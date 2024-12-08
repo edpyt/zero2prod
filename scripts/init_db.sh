@@ -61,6 +61,7 @@ fi
 # Create the application databse
 DATABASE_URL=postgres://${APP_USER}:${APP_USER_PWD}@localhost:${DB_PORT}/${APP_DB_NAME}
 export DATABASE_URL
+echo $DATABASE_URL
 sqlx database create
 sqlx migrate run
 
