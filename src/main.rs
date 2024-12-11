@@ -1,6 +1,9 @@
 use env_logger::Env;
 use sqlx::PgPool;
 use std::net::TcpListener;
+use tracing::subscriber::set_global_default;
+use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 use zero2prod::configuration::get_configuration;
 use zero2prod::startup::run;
 
