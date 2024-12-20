@@ -1,7 +1,13 @@
 meta:
-  environment: docker
+  environment:
+    - docker
+    - db
   toolchain:
-    name: docker
+    docker:
+      name: docker
+    db:
+      name: postgresql
+      version: "16"
 build:
   dockerfile: Dockerfile
   skip: false
