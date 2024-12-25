@@ -1,6 +1,5 @@
 meta:
-  environment:
-    - docker
+  environment: docker
   toolchain:
     name: docker
 build:
@@ -9,3 +8,4 @@ build:
 run:
   persistenceMount: /data
   containerPort: "8000"
+  command: -e "DATABASE_URL=$DATABASE_URL"
