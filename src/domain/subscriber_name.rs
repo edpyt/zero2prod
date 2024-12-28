@@ -2,12 +2,6 @@ use unicode_segmentation::UnicodeSegmentation;
 
 const FORBIDDEN_CHARACTERS: [char; 9] = ['/', '(', ')', '"', '<', '>', '\\', '{', '}'];
 
-pub struct NewSubscriber {
-    pub email: String,
-    pub name: SubscriberName,
-}
-
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct SubscriberName(String);
 
