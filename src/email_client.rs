@@ -1,4 +1,5 @@
 use reqwest::Client;
+use secrecy::{ExposeSecret, SecretString};
 
 use crate::domain::SubscriberEmail;
 
@@ -8,14 +9,20 @@ pub struct EmailClient {
     http_client: Client,
     base_url: String,
     sender: SubscriberEmail,
+    authorization_token: SecretString,
 }
 
 impl EmailClient {
-    pub fn new(base_url: String, sender: SubscriberEmail) -> Self {
+    pub fn new(
+        base_url: String,
+        sender: SubscriberEmail,
+        authorization_token: SecretString,
+    ) -> Self {
         Self {
             http_client: Client::new(),
             base_url,
             sender,
+            authorization_token,
         }
     }
 
@@ -34,7 +41,14 @@ impl EmailClient {
             html_body: html_content.to_owned(),
             text_body: text_content.to_owned(),
         };
-        let _builder = self.http_client.post(&url).json(&request_body);
+        let _builder = self
+            .http_client
+            .post(&url)
+            .header(
+                "X-Postmark-Server-Token",
+                self.authorization_token.expose_secret(),
+            )
+            .json(&request_body);
         Ok(())
     }
 }
@@ -53,7 +67,9 @@ mod tests {
     use crate::domain::SubscriberEmail;
     use crate::email_client::EmailClient;
     use fake::faker::lorem::en::{Paragraph, Sentence};
+    use fake::Faker;
     use fake::{faker::internet::en::SafeEmail, Fake};
+    use secrecy::SecretString;
     use wiremock::matchers::any;
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -62,7 +78,11 @@ mod tests {
         // Arrange
         let mock_server = MockServer::start().await;
         let sender = SubscriberEmail::parse(SafeEmail().fake()).unwrap();
-        let email_client = EmailClient::new(mock_server.uri(), sender);
+        let email_client = EmailClient::new(
+            mock_server.uri(),
+            sender,
+            SecretString::from(Faker.fake::<String>()),
+        );
 
         // TODO:
         // Mock::given(any())
