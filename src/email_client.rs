@@ -81,12 +81,13 @@ impl EmailClient {
 
 #[allow(dead_code)]
 #[derive(serde::Serialize)]
-struct SendEmailRequest {
-    from: String,
-    to: String,
-    subject: String,
-    html_body: String,
-    text_body: String,
+#[serde(rename_all = "PascalCase")]
+struct SendEmailRequest<'a> {
+    from: &'a str,
+    to: &'a str,
+    subject: &'a str,
+    html_body: &'a str,
+    text_body: &'a str,
 }
 
 #[allow(dead_code)]
@@ -126,5 +127,13 @@ mod tests {
         )
     }
 
-    // TODO: tests for smtp email client
+    // TODO: tests with smtp email client
+    #[tokio::test]
+    async fn test_smpt_email_client_send_email() {
+        // FIXME: Maybe use PyO3 here? https://tinyurl.com/mwhxzan9
+        // Command::new("python")
+        //     .arg("-m smtpd -n -c DebuggingServer 127.0.0.1:2525")
+        //     .output()
+        //     .expect("Failed to execute command");
+    }
 }
