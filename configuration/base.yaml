@@ -6,3 +6,8 @@ database:
   username: "postgres"
   password: "password"
   database_name: "newsletter"
+email_client:
+  sender_email: "test@mail.com"
+  password: "password123"
+  timeout_milliseconds: 10000
+  smtp_server: "smtp.mail.com"

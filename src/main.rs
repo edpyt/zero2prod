@@ -14,11 +14,13 @@ async fn main() -> Result<(), std::io::Error> {
     let connection_pool =
         PgPoolOptions::new().connect_lazy_with(configuration.database.connect_options());
 
+    let email_client = configuration.email_client.client();
+
     let address = format!(
         "{}:{}",
         configuration.application.host, configuration.application.port,
     );
     let listener = TcpListener::bind(address)?;
 
-    run(listener, connection_pool)?.await
+    run(listener, connection_pool, email_client)?.await
 }
