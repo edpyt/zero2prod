@@ -7,6 +7,7 @@ database:
   password: "password"
   database_name: "newsletter"
 email_client:
-  base_url: "localhost"
-  sender_email: "test@gmail.com"
-  authorization_token: "my-secret-token"
+  sender_email: "test@mail.com"
+  password: "password123"
+  timeout_milliseconds: 10000
+  smtp_server: "smtp.mail.com"
