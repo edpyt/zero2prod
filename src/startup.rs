@@ -3,8 +3,24 @@ use sqlx::PgPool;
 use std::net::TcpListener;
 use tracing_actix_web::TracingLogger;
 
+use crate::configuration::Settings;
 use crate::email_client::EmailClient;
 use crate::routes::{health_check, subscribe};
+use sqlx::postgres::PgPoolOptions;
+
+pub async fn build(configuration: Settings) -> Result<Server, std::io::Error> {
+    let connection_pool =
+        PgPoolOptions::new().connect_lazy_with(configuration.database.connect_options());
+    let email_client = configuration.email_client.client();
+
+    let address = format!(
+        "{}:{}",
+        configuration.application.host, configuration.application.port,
+    );
+    let listener = TcpListener::bind(address)?;
+
+    run(listener, connection_pool, email_client)
+}
 
 pub fn run(
     listener: TcpListener,

@@ -3,7 +3,7 @@ use std::net::TcpListener;
 use std::sync::LazyLock;
 use uuid::Uuid;
 use zero2prod::configuration::{get_configuration, DatabaseSettings};
-use zero2prod::startup::run;
+use zero2prod::startup::{build, run};
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
 static TRACING: LazyLock<()> = LazyLock::new(|| {
