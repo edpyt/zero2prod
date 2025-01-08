@@ -5,14 +5,14 @@ use sqlx::postgres::{PgConnectOptions, PgSslMode};
 
 use crate::{domain::SubscriberEmail, email_client::EmailClient};
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Clone)]
 pub struct Settings {
     pub database: DatabaseSettings,
     pub application: ApplicationSettings,
     pub email_client: EmailClientSettings,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Clone)]
 pub struct ApplicationSettings {
     pub port: u16,
     pub host: String,
@@ -46,7 +46,7 @@ impl DatabaseSettings {
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Clone)]
 pub struct EmailClientSettings {
     pub sender_email: String,
     #[serde(deserialize_with = "deserialize_number_from_string")]
