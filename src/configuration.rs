@@ -1,9 +1,9 @@
-use secrecy::{ExposeSecret, SecretString};
-
+use crate::domain::SubscriberEmail;
+use crate::email_client::EmailClient;
+use secrecy::{ExposeSecret, Secret};
 use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
-
-use crate::{domain::SubscriberEmail, email_client::EmailClient};
+use std::convert::{TryFrom, TryInto};
 
 #[derive(serde::Deserialize, Clone)]
 pub struct Settings {
@@ -14,14 +14,16 @@ pub struct Settings {
 
 #[derive(serde::Deserialize, Clone)]
 pub struct ApplicationSettings {
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub host: String,
+    pub base_url: String,
 }
 
 #[derive(serde::Deserialize, Clone)]
 pub struct DatabaseSettings {
     pub username: String,
-    pub password: SecretString,
+    pub password: Secret<String>,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub host: String,
@@ -37,12 +39,11 @@ impl DatabaseSettings {
             PgSslMode::Prefer
         };
         PgConnectOptions::new()
+            .host(&self.host)
             .username(&self.username)
             .password(self.password.expose_secret())
-            .host(&self.host)
             .port(self.port)
             .ssl_mode(ssl_mode)
-            .database(&self.database_name)
     }
 }
 
@@ -51,9 +52,27 @@ pub struct EmailClientSettings {
     pub sender_email: String,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub timeout_milliseconds: u64,
+    pub kind: KindEmailProviderSettings,
+}
+
+#[derive(serde::Deserialize, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum KindEmailProviderSettings {
+    URL(EmailProviderURLSettings),
+    SMTP(EmailProviderSMTPSettings),
+}
+
+#[derive(serde::Deserialize, Clone)]
+pub struct EmailProviderURLSettings {
+    pub base_url: String,
+    pub authorization_token: Secret<String>,
+}
+
+#[derive(serde::Deserialize, Clone)]
+pub struct EmailProviderSMTPSettings {
     name: Option<String>,
     username: Option<String>,
-    password: SecretString,
+    password: Secret<String>,
     smtp_server: String,
 }
 
@@ -62,14 +81,22 @@ impl EmailClientSettings {
         let sender_email = self.sender().expect("Invalid sender email address.");
         let timeout = self.timeout();
 
-        EmailClient::new(
-            sender_email,
-            timeout,
-            self.name,
-            self.username,
-            self.password,
-            self.smtp_server,
-        )
+        match self.kind {
+            KindEmailProviderSettings::URL(kind) => EmailClient::new_url(
+                kind.base_url,
+                sender_email,
+                kind.authorization_token,
+                timeout,
+            ),
+            KindEmailProviderSettings::SMTP(kind) => EmailClient::new_smtp(
+                sender_email,
+                timeout,
+                kind.name,
+                kind.username,
+                kind.password,
+                kind.smtp_server,
+            ),
+        }
     }
 
     pub fn sender(&self) -> Result<SubscriberEmail, String> {
@@ -85,6 +112,8 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
     let base_path = std::env::current_dir().expect("Failed to determine the current directory");
     let configuration_directory = base_path.join("configuration");
 
+    // Detect the running environment.
+    // Default to `local` if unspecified.
     let environment: Environment = std::env::var("APP_ENVIRONMENT")
         .unwrap_or_else(|_| "local".into())
         .try_into()
@@ -95,8 +124,10 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
             configuration_directory.join("base.yaml"),
         ))
         .add_source(config::File::from(
-            configuration_directory.join(environment_filename),
+            configuration_directory.join(&environment_filename),
         ))
+        // Add in settings from environment variables (with a prefix of APP and '__' as separator)
+        // E.g. `APP_APPLICATION__PORT=5001 would set `Settings.application.port`
         .add_source(
             config::Environment::with_prefix("APP")
                 .prefix_separator("_")
@@ -107,6 +138,7 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
     settings.try_deserialize::<Settings>()
 }
 
+/// The possible runtime environment for our application.
 pub enum Environment {
     Local,
     Production,
@@ -129,8 +161,7 @@ impl TryFrom<String> for Environment {
             "local" => Ok(Self::Local),
             "production" => Ok(Self::Production),
             other => Err(format!(
-                "{} is not a supported environment. \
-                Use either `local` or `production`.",
+                "{} is not a supported environment. Use either `local` or `production`.",
                 other
             )),
         }
