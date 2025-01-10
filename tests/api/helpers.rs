@@ -1,10 +1,15 @@
+use secrecy::SecretString;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::sync::LazyLock;
 use uuid::Uuid;
-use zero2prod::configuration::{get_configuration, DatabaseSettings};
+use wiremock::MockServer;
+use zero2prod::configuration::{
+    get_configuration, DatabaseSettings, EmailProviderURLSettings, KindEmailProviderSettings,
+};
 use zero2prod::startup::{get_connection_pool, Application};
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
+// Ensure that the `tracing` stack is only initialised once using `once_cell`
 static TRACING: LazyLock<()> = LazyLock::new(|| {
     let default_filter_level = "info".to_string();
     let subscriber_name = "test".to_string();
@@ -19,7 +24,15 @@ static TRACING: LazyLock<()> = LazyLock::new(|| {
 
 pub struct TestApp {
     pub address: String,
+    pub port: u16,
     pub db_pool: PgPool,
+    pub email_server: MockServer,
+}
+
+/// Confirmation links embedded in the request to the email API.
+pub struct ConfirmationLinks {
+    pub html: reqwest::Url,
+    pub plain_text: reqwest::Url,
 }
 
 impl TestApp {
@@ -32,45 +45,93 @@ impl TestApp {
             .await
             .expect("Failed to execute request.")
     }
+
+    /// Extract the confirmation links embedded in the request to the email API.
+    pub fn get_confirmation_links(&self, email_request: &wiremock::Request) -> ConfirmationLinks {
+        let body: serde_json::Value = serde_json::from_slice(&email_request.body).unwrap();
+
+        // Extract the link from one of the request fields.
+        let get_link = |s: &str| {
+            let links: Vec<_> = linkify::LinkFinder::new()
+                .links(s)
+                .filter(|l| *l.kind() == linkify::LinkKind::Url)
+                .collect();
+            assert_eq!(links.len(), 1);
+            let raw_link = links[0].as_str().to_owned();
+            let mut confirmation_link = reqwest::Url::parse(&raw_link).unwrap();
+            // Let's make sure we don't call random APIs on the web
+            assert_eq!(confirmation_link.host_str().unwrap(), "127.0.0.1");
+            confirmation_link.set_port(Some(self.port)).unwrap();
+            confirmation_link
+        };
+
+        let html = get_link(body["HtmlBody"].as_str().unwrap());
+        let plain_text = get_link(body["TextBody"].as_str().unwrap());
+        ConfirmationLinks { html, plain_text }
+    }
 }
 
 pub async fn spawn_app() -> TestApp {
     LazyLock::force(&TRACING);
 
+    // Launch a mock server to stand in for Postmark's API
+    let email_server = MockServer::start().await;
+
+    // Randomise configuration to ensure test isolation
     let configuration = {
         let mut c = get_configuration().expect("Failed to read configuration.");
+        // Use a different database for each test case
         c.database.database_name = Uuid::new_v4().to_string();
+        // Use a random OS port
         c.application.port = 0;
+        // Use the mock server as email API
+        if let KindEmailProviderSettings::URL(kind) = &mut c.email_client.kind {
+            kind.base_url = email_server.uri();
+        } else {
+            // TODO: Add tests for SMTP. Haven't figured out a good way yet so just always testing with URL for now
+            c.email_client.kind = KindEmailProviderSettings::URL(EmailProviderURLSettings {
+                base_url: email_server.uri(),
+                authorization_token: SecretString::from("lelel"),
+            });
+        }
         c
     };
+
+    // Create and migrate the database
     configure_database(&configuration.database).await;
 
+    // Launch the application as a background task
     let application = Application::build(configuration.clone())
         .await
         .expect("Failed to build application.");
-    let address = format!("http://127.0.0.1:{}", application.port());
+    let application_port = application.port();
     let _ = tokio::spawn(application.run_until_stopped());
 
     TestApp {
-        address,
+        address: format!("http://localhost:{}", application_port),
+        port: application_port,
         db_pool: get_connection_pool(&configuration.database),
+        email_server,
     }
 }
 
 async fn configure_database(config: &DatabaseSettings) -> PgPool {
+    // Create database
     let maintenance_settings = DatabaseSettings {
         database_name: "postgres".to_string(),
         username: "postgres".to_string(),
-        password: "password".into(),
+        password: SecretString::from("password".to_string()),
         ..config.clone()
     };
     let mut connection = PgConnection::connect_with(&maintenance_settings.connect_options())
         .await
-        .expect("Failed to connecto to Postgres");
+        .expect("Failed to connect to Postgres");
     connection
         .execute(format!(r#"CREATE DATABASE "{}";"#, config.database_name).as_str())
         .await
         .expect("Failed to create database.");
+
+    // Migrate database
     let connection_pool = PgPool::connect_with(config.connect_options())
         .await
         .expect("Failed to connect to Postgres.");
