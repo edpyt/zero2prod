@@ -1,4 +1,4 @@
-use secrecy::SecretString;
+use secrecy::{Secret, SecretString};
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::sync::LazyLock;
 use uuid::Uuid;
@@ -91,7 +91,7 @@ pub async fn spawn_app() -> TestApp {
             // TODO: Add tests for SMTP. Haven't figured out a good way yet so just always testing with URL for now
             c.email_client.kind = KindEmailProviderSettings::URL(EmailProviderURLSettings {
                 base_url: email_server.uri(),
-                authorization_token: SecretString::from("lelel"),
+                authorization_token: Secret::new(Default::default()),
             });
         }
         c
