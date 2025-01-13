@@ -135,7 +135,6 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
         )
         .build()?;
 
-    println!("------");
     settings.try_deserialize::<Settings>()
 }
 
