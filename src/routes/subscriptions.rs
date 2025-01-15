@@ -3,6 +3,8 @@ use crate::email_client::EmailClient;
 use crate::startup::ApplicationBaseUrl;
 use actix_web::{web, HttpResponse};
 use chrono::Utc;
+use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
 use sqlx::types::Uuid;
 use sqlx::PgPool;
 
@@ -42,7 +44,7 @@ pub async fn subscribe(
     if insert_subscriber(&pool, &new_subscriber).await.is_err() {
         return HttpResponse::InternalServerError().finish();
     };
-    if send_confirmation_email(&email_client, new_subscriber, &base_url.0)
+    if send_confirmation_email(&email_client, new_subscriber, &base_url.0, "mytoken")
         .await
         .is_err()
     {
@@ -59,10 +61,12 @@ pub async fn send_confirmation_email(
     email_client: &EmailClient,
     new_subscriber: NewSubscriber,
     base_url: &str,
+    // CSPRNG
+    subscription_token: &str,
 ) -> Result<(), anyhow::Error> {
     let confirmation_link = format!(
         "{}/subscriptions/confirm?subscription_token={}",
-        base_url, "mytoken",
+        base_url, subscription_token,
     );
     let plain_body = format!(
         "Welcome to our newsletter!\nVisit {} to confirm your subscription.",
@@ -103,4 +107,14 @@ pub async fn insert_subscriber(
         e
     })?;
     Ok(())
+}
+
+#[allow(dead_code)]
+/// Generate a random 25-characters-long case-sensitive subscription token.
+fn generate_subscription_token() -> String {
+    let mut rng = thread_rng();
+    std::iter::repeat_with(|| rng.sample(Alphanumeric))
+        .map(char::from)
+        .take(25)
+        .collect()
 }
