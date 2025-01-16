@@ -14,7 +14,7 @@ name = "zero2prod"
 actix-web = "4.9.0"
 serde = { version = "1.0.215", features = ["derive"] }
 tokio = { version = "1.41.1", features = ["macros", "rt-multi-thread"] }
-config = { version = "0.13", default-features = false, features = ["yaml"] }
+config = { version = "0.15", default-features = false, features = ["yaml"] }
 uuid = { version = "1.11.0", features = ["v4"] }
 chrono = { version = "0.4.38", features = ["clock"] }
 log = "0.4.22"
