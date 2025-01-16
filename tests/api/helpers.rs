@@ -1,4 +1,4 @@
-use secrecy::{Secret, SecretString};
+use secrecy::Secret;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::sync::LazyLock;
 use uuid::Uuid;
@@ -120,7 +120,7 @@ async fn configure_database(config: &DatabaseSettings) -> PgPool {
     let maintenance_settings = DatabaseSettings {
         database_name: "postgres".to_string(),
         username: "postgres".to_string(),
-        password: SecretString::from("password".to_string()),
+        password: Secret::new("password".to_string()),
         ..config.clone()
     };
     let mut connection = PgConnection::connect_with(&maintenance_settings.connect_options())
