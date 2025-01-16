@@ -14,7 +14,7 @@ name = "zero2prod"
 actix-web = "4.9.0"
 serde = { version = "1.0.215", features = ["derive"] }
 tokio = { version = "1.41.1", features = ["macros", "rt-multi-thread"] }
-config = "0.14"
+config = { version = "0.13", default-features = false, features = ["yaml"] }
 uuid = { version = "1.11.0", features = ["v4"] }
 chrono = { version = "0.4.38", features = ["clock"] }
 log = "0.4.22"
@@ -22,12 +22,14 @@ tracing = { version = "0.1.41", features = ["log"] }
 tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
 tracing-bunyan-formatter = "0.3.10"
 tracing-log = "0.2"
-secrecy = { version = "0.10.3", features = ["serde"] }
+secrecy = { version = "0.8", features = ["serde"] }
 tracing-actix-web = "0.7"
 serde-aux = "4.5.0"
 unicode-segmentation = "1"
 validator = "0.19"
+rand = { version = "0.8", features = ["std_rng"] }
 lettre = "0.11.11"
+anyhow = "1.0.40"
 
 [dependencies.sqlx]
 version = "0.8"
@@ -46,12 +48,11 @@ version = "0.12"
 default-features = false
 features = ["json", "rustls-tls"]
 
-
 [dev-dependencies]
 claims = "0.7"
 fake = "2.9"
+linkify = "0.10"
 quickcheck = "1.0.3"
 quickcheck_macros = "1"
-rand = "0.8"
-tokio = { version = "1", features = ["rt", "macros"] }
+serde_json = "1.0.61"
 wiremock = "0.6"
