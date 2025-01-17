@@ -47,7 +47,21 @@ pub async fn subscribe(
 
     let subscriber_id = match insert_subscriber(&mut transaction, &new_subscriber).await {
         Ok(subscriber_id) => subscriber_id,
-        Err(_) => return HttpResponse::InternalServerError().finish(),
+        Err(_) => {
+            if let Ok(status) = get_subscriber_status_by_email(&pool, new_subscriber.email).await {
+                if status == *"pending_confirmation" {
+                    todo!()
+                    // TODO:
+                    // send_confirmation_email(
+                    //     &email_client,
+                    //     new_subscriber,
+                    //     &base_url,
+                    //     subscription_token,
+                    // )
+                }
+            }
+            return HttpResponse::InternalServerError().finish();
+        }
     };
     let subscription_token = generate_subscription_token();
     if store_token(&mut transaction, subscriber_id, &subscription_token)
@@ -119,6 +133,26 @@ pub async fn store_token(
         e
     })?;
     Ok(())
+}
+
+#[tracing::instrument(name = "Get subscriber by email", skip(pool))]
+pub async fn get_subscriber_status_by_email(
+    pool: &PgPool,
+    subscriber_email: SubscriberEmail,
+) -> Result<String, sqlx::Error> {
+    let saved = sqlx::query!(
+        "SELECT email, name, status FROM subscriptions \
+        WHERE email = $1",
+        subscriber_email.as_ref()
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
+    let subscriber_status = saved.map(|s| s.status).unwrap();
+    Ok(subscriber_status)
 }
 
 #[tracing::instrument(
