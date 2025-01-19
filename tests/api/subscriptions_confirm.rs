@@ -94,3 +94,36 @@ async fn subscribe_twice_returns_two_confirmation_emails() {
     // Assert
     assert_eq!(email_requests.len(), 2)
 }
+
+#[tokio::test]
+async fn clicking_on_the_confirmation_link_twice() {
+    // Arrange
+    let app = spawn_app().await;
+    let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&app.email_server)
+        .await;
+
+    app.post_subscriptions(body.into()).await;
+    let email_request = &app.email_server.received_requests().await.unwrap()[0];
+    let confirmation_links = app.get_confirmation_links(&email_request);
+
+    // Act
+    for _ in 0..2 {
+        reqwest::get(confirmation_links.html.clone())
+            .await
+            .unwrap()
+            .error_for_status()
+            .unwrap();
+    }
+
+    // Assert
+    let saved = sqlx::query!("SELECT email, name, status FROM subscriptions",)
+        .fetch_all(&app.db_pool)
+        .await
+        .expect("Failed to fetch saved subscription");
+
+    assert_eq!(saved.len(), 1)
+}
