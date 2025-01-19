@@ -92,5 +92,5 @@ async fn subscribe_twice_returns_two_confirmation_emails() {
     let email_requests = &app.email_server.received_requests().await.unwrap();
 
     // Assert
-    // assert_eq!(email_requests.len(), 2)
+    assert_eq!(email_requests.len(), 2)
 }
