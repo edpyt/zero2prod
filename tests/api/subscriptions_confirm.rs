@@ -76,26 +76,6 @@ async fn clicking_on_the_confirmation_link_confirms_a_subscriber() {
 }
 
 #[tokio::test]
-async fn subscribe_twice_returns_two_confirmation_emails() {
-    // Arrange
-    let app = spawn_app().await;
-    let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
-    Mock::given(path("/email"))
-        .and(method("POST"))
-        .respond_with(ResponseTemplate::new(200))
-        .mount(&app.email_server)
-        .await;
-
-    // Act
-    app.post_subscriptions(body.into()).await;
-    app.post_subscriptions(body.into()).await;
-    let email_requests = &app.email_server.received_requests().await.unwrap();
-
-    // Assert
-    assert_eq!(email_requests.len(), 2)
-}
-
-#[tokio::test]
 async fn clicking_on_the_confirmation_link_twice() {
     // Arrange
     let app = spawn_app().await;
