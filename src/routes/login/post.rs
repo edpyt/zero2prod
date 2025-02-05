@@ -1,5 +1,8 @@
 use actix_web::{
-    http::{header::LOCATION, StatusCode},
+    http::{
+        header::{ContentType, LOCATION},
+        StatusCode,
+    },
     web, HttpResponse, ResponseError,
 };
 use secrecy::Secret;
@@ -56,6 +59,20 @@ impl std::fmt::Debug for LoginError {
 }
 
 impl ResponseError for LoginError {
+    fn error_response(&self) -> HttpResponse<actix_web::body::BoxBody> {
+        HttpResponse::build(self.status_code())
+            .content_type(ContentType::html())
+            .body(
+                r#"<!DOCTYPE html>
+                <html lang="en">
+                <head>
+                  <title>Bob</title>
+                </head>
+
+            "#,
+            )
+    }
+
     fn status_code(&self) -> actix_web::http::StatusCode {
         match self {
             LoginError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
