@@ -17,3 +17,5 @@ email_client:
     url:
       base_url: "localhost"
       authorization_token: "my-secret-token"
+
+redis_uri: "redis://127.0.0.1:6379"

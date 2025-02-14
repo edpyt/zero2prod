@@ -15,7 +15,7 @@ actix-web = "4.9.0"
 serde = { version = "1.0.215", features = ["derive"] }
 tokio = { version = "1.41.1", features = ["macros", "rt-multi-thread"] }
 config = { version = "0.15", default-features = false, features = ["yaml"] }
-uuid = { version = "1.11.0", features = ["v4"] }
+uuid = { version = "1.11.0", features = ["serde", "v4"] }
 chrono = { version = "0.4.38", features = ["clock"] }
 log = "0.4.22"
 tracing = { version = "0.1.41", features = ["log"] }
@@ -40,6 +40,7 @@ hmac = { version = "0.12", features = ["std"] }
 sha2 = "0.10"
 hex = "0.4"
 actix-web-flash-messages = { version = "0.5", features = ["cookies"] }
+actix-session = { version = "0.10", features = ["redis-session-rustls"] }
 
 [dependencies.sqlx]
 version = "0.8"
