@@ -122,7 +122,7 @@ impl TestApp {
 
     pub async fn get_change_password(&self) -> reqwest::Response {
         self.api_client
-            .get(&format!("{}/admin/password", &self.address))
+            .get(format!("{}/admin/password", &self.address))
             .send()
             .await
             .expect("Failed to execute request.")
@@ -133,11 +133,15 @@ impl TestApp {
         Body: serde::Serialize,
     {
         self.api_client
-            .get(&format!("{}/admin/password", &self.address))
+            .post(format!("{}/admin/password", &self.address))
             .form(body)
             .send()
             .await
             .expect("Failed to execute request.")
+    }
+
+    pub async fn get_change_password_html(&self) -> String {
+        self.get_change_password().await.text().await.unwrap()
     }
 }
 
