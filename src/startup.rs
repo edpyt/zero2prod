@@ -14,8 +14,10 @@ use tracing_actix_web::TracingLogger;
 use crate::authentication::reject_anonymous_users;
 use crate::configuration::{DatabaseSettings, Settings};
 use crate::email_client::EmailClient;
-use crate::routes::{admin_dashboard, change_password, change_password_form, log_out};
-use crate::routes::{confirm, home, login, login_form, publish_newsletter};
+use crate::routes::{
+    admin_dashboard, change_password, change_password_form, log_out, publish_newsletter,
+};
+use crate::routes::{confirm, home, login, login_form};
 use crate::routes::{health_check, subscribe};
 use sqlx::postgres::PgPoolOptions;
 
