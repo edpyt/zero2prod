@@ -41,7 +41,7 @@ pub async fn publish_newsletter(
         html_content,
         idempotency_key,
     } = form.0;
-    let idempotency_key: IdempotencyKey = idempotency_key.try_into().map_err(e400)?;
+    let _idempotency_key: IdempotencyKey = idempotency_key.try_into().map_err(e400)?;
     let subscribers = get_confirmed_subscribers(&pool).await.map_err(e500)?;
     for subscriber in subscribers {
         match subscriber {
@@ -63,8 +63,12 @@ pub async fn publish_newsletter(
             }
         }
     }
-    FlashMessage::info("The newsletter issue has been published!").send();
-    Ok(see_other("/admin/newsletter"))
+    FlashMessage::info(
+        "The newsletter issue has been accepted - \
+        emails will go out shortly.",
+    )
+    .send();
+    Ok(see_other("/admin/newsletters"))
 }
 
 struct ConfirmedSubscriber {
