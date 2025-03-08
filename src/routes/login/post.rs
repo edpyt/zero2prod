@@ -1,10 +1,5 @@
-use actix_web::{
-    error::InternalError,
-    http::{header::LOCATION, StatusCode},
-    web, HttpResponse, ResponseError,
-};
+use actix_web::{error::InternalError, http::header::LOCATION, web, HttpResponse};
 use actix_web_flash_messages::FlashMessage;
-use hmac::{Hmac, Mac};
 use secrecy::Secret;
 use sqlx::PgPool;
 
@@ -75,25 +70,5 @@ pub enum LoginError {
 impl std::fmt::Debug for LoginError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         error_chain_fmt(self, f)
-    }
-}
-
-impl ResponseError for LoginError {
-    #[allow(unused_variables, unreachable_code)]
-    fn error_response(&self) -> HttpResponse<actix_web::body::BoxBody> {
-        let query_string = format!("error={}", urlencoding::Encoded::new(self.to_string()));
-        let secret: &[u8] = todo!();
-        let hmac_tag = {
-            let mut mac = Hmac::<sha2::Sha256>::new_from_slice(secret).unwrap();
-            mac.update(query_string.as_bytes());
-            mac.finalize().into_bytes()
-        };
-        HttpResponse::build(self.status_code())
-            .insert_header((LOCATION, format!("/login?{query_string}&tag={hmac_tag:x}")))
-            .finish()
-    }
-
-    fn status_code(&self) -> actix_web::http::StatusCode {
-        StatusCode::SEE_OTHER
     }
 }
